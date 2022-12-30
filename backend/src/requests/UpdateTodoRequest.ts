@@ -6,7 +6,7 @@ export interface UpdateTodoRequest {
   name: string
   description: string
   dueDate: string
-  assignTo: string
+  assignTo?: string
   done: boolean
   attachmentUrl?: string
 }

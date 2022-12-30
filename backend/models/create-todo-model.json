@@ -18,15 +18,13 @@
       "maxLength": 1000
     },
     "assignTo": {
-      "type": "string",
-      "minLength": 1
+      "type": "string"
     }
   },
   "required": [
     "name",
     "dueDate",
-    "description",
-    "assignTo"
+    "description"
   ],
   "additionalProperties": false
 }
