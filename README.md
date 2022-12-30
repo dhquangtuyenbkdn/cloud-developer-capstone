@@ -8,11 +8,11 @@
 2. User can edit info and avatar after create:
 ![View user info](images/UserInfo.PNG)
 
-![Edit user info](images/Edit-user-info.PNG.PNG)
+![Edit user info](images/Edit-user-info.PNG)
 
 # Task manager
 1. Each user can create task
-![Create task](images/Create-new-task.PNG.PNG)
+![Create task](images/Create-new-task.PNG)
 
 2. User can assing/delegate task to other user in project
 ![Edit task](images/Edit-task.PNG)
