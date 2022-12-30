@@ -66,7 +66,7 @@ export class UserAccess {
     await this.docClient.put({
       TableName: this.userTable,
       Item: user,
-      ConditionExpression: "attribute_not_exists(email)",
+      ConditionExpression: "attribute_not_exists(name) AND attribute_not_exists(email)",
     }).promise()
 
     return user
@@ -92,7 +92,7 @@ export class UserAccess {
         ':email': user.email,
         ':updateAt': user.updateAt
       },
-      ConditionExpression: "attribute_not_exists(email)",
+      ConditionExpression: "attribute_not_exists(name) AND attribute_not_exists(email)",
     }).promise()
 
     return await this.getUser(userId);
