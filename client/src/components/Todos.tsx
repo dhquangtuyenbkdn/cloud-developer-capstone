@@ -261,7 +261,7 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
         loadingTodos: false
       })
 
-      if(isViewAll) {
+      if (isViewAll) {
         const users = await getAllUsers(this.props.auth.getIdToken())
 
         const selectUsers: any = []
@@ -436,7 +436,9 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
         <Card.Content>
           <Feed.Event>
             {todo.attachmentUrl && (
-              <Feed.Label image={todo.attachmentUrl} />
+              <Feed.Label>
+                <Image size='medium' src={todo.attachmentUrl} />
+              </Feed.Label>
             )}
             <Feed.Content>
               <Feed.Date content={todo.dueDate} />
