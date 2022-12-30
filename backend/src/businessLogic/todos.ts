@@ -31,7 +31,7 @@ export async function createTodo(
     const itemId = uuid.v4();
     logger.info('Create todo for: ', userId)
 
-    let attachmentUrl = attachmentUtils.createAttachmentPresignedUrl(imageBucketName, userId, itemId);
+    let attachmentUrl = attachmentUtils.getAttachmentUrl(imageBucketName, userId, itemId);
 
     let todo = await todoAccess.createTodo({
         todoId: itemId,
