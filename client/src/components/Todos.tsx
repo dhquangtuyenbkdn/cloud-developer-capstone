@@ -4,7 +4,7 @@ import update from 'immutability-helper'
 import * as React from 'react'
 import { Button, Checkbox, Divider, Grid, Header, Icon, Input, Image, Loader, Card, Feed, Label, Modal, Form, DropdownProps, CheckboxProps } from 'semantic-ui-react'
 
-import { createTodo, deleteTodo, getAllTodos, patchTodo, getUploadUrl } from '../api/todos-api'
+import { createTodo, deleteTodo, getAllTodos, getTodos, patchTodo, getUploadUrl } from '../api/todos-api'
 import { getAllUsers } from '../api/user-api'
 import { uploadFile } from '../api/file-api'
 import Auth from '../auth/Auth'
@@ -12,6 +12,7 @@ import { Todo } from '../types/Todo'
 import { User } from '../types/User'
 
 const defaultAvatarURL = 'https://react.semantic-ui.com/images/avatar/small/elliot.jpg';
+const isViewAll = false;
 
 interface TodosProps {
   auth: Auth
@@ -254,7 +255,7 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
 
   async componentDidMount() {
     try {
-      const todos = await getAllTodos(this.props.auth.getIdToken())
+      const todos = await (isViewAll ? getAllTodos(this.props.auth.getIdToken()) : getTodos(this.props.auth.getIdToken()))
       this.setState({
         todos,
         loadingTodos: false
@@ -413,8 +414,8 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
 
 
   renderTodosListCard(todo: Todo) {
-    let assignUser = null;
-    if (todo.assignTo && todo.assignTo.length > 0)
+    let assignUser = this.state.currentUser;
+    if (todo.assignTo && todo.assignTo.length > 0 && isViewAll)
       assignUser = this.state.users.find(u => u.id == todo.assignTo)
     let userAvatar = assignUser?.avatarUrl ?? defaultAvatarURL;
     let userName = assignUser?.name ?? this.state.currentUser?.name ?? '';
@@ -512,11 +513,13 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
                   value={this.state.currentDescription}
                   onChange={this.handleDescriptionChange}
                 />
-                <Form.Select
-                  options={this.state.selectUsers}
-                  value={this.state.currentAssignTo}
-                  onChange={this.handleAssignChange}
-                  placeholder='Assign To' />
+                {isViewAll && (
+                  <Form.Select
+                    options={this.state.selectUsers}
+                    value={this.state.currentAssignTo}
+                    onChange={this.handleAssignChange}
+                    placeholder='Assign To' />
+                )}
 
                 <Form.Checkbox
                   label=''
@@ -575,11 +578,14 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
                 value={this.state.currentDescription}
                 onChange={this.handleDescriptionChange}
               />
-              <Form.Select
-                options={this.state.selectUsers}
-                value={this.state.currentAssignTo}
-                onChange={this.handleAssignChange}
-                placeholder='Assign To' />
+
+              {isViewAll && (
+                <Form.Select
+                  options={this.state.selectUsers}
+                  value={this.state.currentAssignTo}
+                  onChange={this.handleAssignChange}
+                  placeholder='Assign To' />
+              )}
             </Form>
           </Modal.Description>
         </Modal.Content>
@@ -626,9 +632,11 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
   }
 
   handleAssignChange = (event: React.SyntheticEvent<HTMLElement, Event>, data: DropdownProps) => {
-    this.setState({
-      currentAssignTo: (data.value ?? '').toString()
-    })
+    if (isViewAll) {
+      this.setState({
+        currentAssignTo: (data.value ?? '').toString()
+      })
+    }
   }
 
   handleDoneChange = (event: React.FormEvent<HTMLInputElement>, data: CheckboxProps) => {
