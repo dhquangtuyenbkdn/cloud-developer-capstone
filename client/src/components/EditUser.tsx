@@ -105,7 +105,17 @@ export class EditUser extends React.PureComponent<EditUserProps, EditUserState> 
       }
       this.setUserState(UserState.Finish)
     } catch (e) {
-      alert('Could not upload a file: ' + (e as Error).message)
+      if (this.state.editState == UserState.Editing) {
+        alert('Could edit user: ' + (e as Error).message + '\r\nPlease check your name and email')
+      }
+      else {
+        alert('Could not upload a file: ' + (e as Error).message)
+      }
+      this.setState({
+        name: this.props.user.name,
+        email: this.props.user.email,
+        editState: UserState.Edit
+      })
     } finally {
       // this.setUploadState(UploadState.NoUpload)
     }
