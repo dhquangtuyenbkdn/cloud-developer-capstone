@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "create-user-model",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 5,
+      "maxLength": 50
+    },
+    "email": {
+      "type": "string",
+      "pattern": "^\\S+@\\S+\\.\\S+$",
+      "format": "email",
+      "minLength": 6,
+      "maxLength": 127
+    }
+  },
+  "required": [
+    "name",
+    "email"
+  ],
+  "additionalProperties": false
+}

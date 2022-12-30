@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "todo",
+  "type": "object",
+  "properties": {
+    "userId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "dueDate": {
+      "type": "string",
+      "minLength": 8,
+      "format": "date"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "assignTo": {
+      "type": "string",
+      "minLength": 1
+    },
+    "done": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "userId",
+    "name",
+    "dueDate",
+    "description",
+    "assignTo",
+    "done"
+  ],
+  "additionalProperties": false
+}

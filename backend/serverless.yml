@@ -1,0 +1,595 @@
+# TODO: Change the name of the org 
+org: tuyendhq
+service: tuyendhq-serverless
+
+plugins:
+- serverless-webpack
+- serverless-iam-roles-per-function
+- serverless-plugin-tracing
+- serverless-reqvalidator-plugin
+- serverless-offline
+#- serverless-aws-documentation
+
+package:
+  individually: false
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  lambdaHashingVersion: '20201221'
+
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+
+  tracing:
+    lambda: true
+    apiGateway: true
+
+  # Use these variables in the functions and resouorces section below. For example, 
+  # ${self:provider.environment.FILE_S3_BUCKET}
+  environment:
+    TODOS_TABLE: Todos-${self:provider.stage}
+    TODOS_INDEX: UserIdIndex
+    USERS_TABLE: Users-${self:provider.stage}
+    # USERS_NAME_INDEX: UserNameIndex
+    # FILE_S3_BUCKET: tuyendhq-avatar-${self:provider.stage}
+    FILE_S3_BUCKET: tuyendhq-serverless-file-${self:provider.stage}
+    SIGNED_URL_EXPIRATION: 300
+    THUMBNAILS_S3_BUCKET: tuyendhq-serverless-thumbnail-${self:provider.stage}
+    SLS_DEBUG: "*"
+
+  logs:
+    # Enable API Gateway logs
+    restApi: true
+
+  iam:
+    role:
+      statements:
+      - Effect: Allow
+        Action:
+        - codedeploy:*
+        Resource:
+        - '*'
+      - Effect: Allow
+        Action:
+        - dynamodb:Scan
+        - dynamodb:PutItem
+        - dynamodb:GetItem
+        - dynamodb:DeleteItem
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
+      - Effect: Allow
+        Action:
+        - s3:PutObject
+        - s3:GetObject
+        - s3:DeleteObject
+        Resource: arn:aws:s3:::${self:provider.environment.FILE_S3_BUCKET}/*
+      - Effect: Allow
+        Action:
+        - xray:PutTelemetryRecords
+        - xray:PutTraceSegments
+        Resource: "*"
+      - Effect: Allow
+        Action:
+        - s3:PutObject
+        - s3:GetObject
+        - s3:DeleteObject
+        Resource: "arn:aws:s3:::${self:provider.environment.THUMBNAILS_S3_BUCKET}/*"
+
+custom:
+  topicName: imagesTopic-${self:provider.stage}
+  documentation:
+    api:
+      info:
+        version: v1.0.0
+        title: Serverless API
+        description: Serverless application for todo list
+
+functions:
+
+  Auth:
+    handler: src/lambda/auth/auth0Authorizer.handler
+
+  # TODO: Configure this function - 
+  # Provide iamRoleStatements property for performing Actions on DynamoDB
+  GetTodos:
+    handler: src/lambda/http/getTodos.handler
+    events:
+    - http:
+        method: get
+        path: todos
+        cors: true
+        authorizer: Auth
+        reqValidatorName: 'xRequestValidator'
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+      - dynamodb:Query
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
+    - Effect: Allow
+      Action:
+      - dynamodb:Query
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}/index/${self:provider.environment.TODOS_INDEX}
+
+  GetAllTodos:
+    handler: src/lambda/http/getAllTodos.handler
+    events:
+    - http:
+        method: get
+        path: todos/getAll
+        cors: true
+        authorizer: Auth
+        reqValidatorName: 'xRequestValidator'
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+      - dynamodb:Query
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
+    - Effect: Allow
+      Action:
+      - dynamodb:Query
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}/index/${self:provider.environment.TODOS_INDEX}
+
+  # TODO: Configure this function - 
+  # Provide iamRoleStatements property. Decide the Actions and AWS Resource. 
+  # To refer to an AWS resource defined in the "Resources" section, you can use "Resource: !GetAtt <resource-name>.Arn"
+  # To validate incoming HTTP requests, we have provided the request schemas in function definition below. 
+  CreateTodo:
+    handler: src/lambda/http/createTodo.handler
+    events:
+    - http:
+        method: post
+        path: todos
+        cors: true
+        authorizer: Auth
+
+        request:
+          schemas:
+            application/json: ${file(models/create-todo-model.json)}
+        reqValidatorName: 'RequestBodyValidator'
+        # documentation:
+    #   summary: "Create todo"
+    #   description: "Create todo"
+    #   tags:
+    #   - "Data Creation"
+    #   requestModels:
+    #     "application/json": "CreateTodoRequest"
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+      - dynamodb:PutItem
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
+
+  # TODO: Configure this function
+  # Provide property for setting up CORS, Authorizer, iamRoleStatements, and request schemas
+  UpdateTodo:
+    handler: src/lambda/http/updateTodo.handler
+    events:
+    - http:
+        method: patch
+        path: todos/{todoId}
+        cors: true
+        authorizer: Auth
+        request:
+          schemas:
+            application/json: ${file(models/update-todo-model.json)}
+        reqValidatorName: 'RequestBodyValidator'
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+      - dynamodb:UpdateItem
+      - dynamodb:GetItem
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
+
+  # TODO: Configure this function
+  # Provide property for setting up CORS, Authorizer, iamRoleStatements
+  DeleteTodo:
+    handler: src/lambda/http/deleteTodo.handler
+    events:
+    - http:
+        method: delete
+        path: todos/{todoId}
+        cors: true
+        authorizer: Auth
+        request:
+          schemas:
+            application/json: ${file(models/default-todo-model.json)}
+        reqValidatorName: 'xRequestValidator'
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+      - dynamodb:DeleteItem
+      - dynamodb:Query
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
+    - Effect: Allow
+      Action:
+      - s3:DeleteObject
+      Resource: arn:aws:s3:::${self:provider.environment.FILE_S3_BUCKET}/*
+    - Effect: Allow
+      Action:
+      - s3:DeleteObject
+      Resource: arn:aws:s3:::${self:provider.environment.THUMBNAILS_S3_BUCKET}/*
+
+  # TODO: Configure this function
+  # Provide property for setting up CORS, Authorizer, iamRoleStatements
+  GenerateUploadUrl:
+    handler: src/lambda/http/generateUploadUrl.handler
+    events:
+    - http:
+        method: post
+        path: todos/{todoId}/attachment
+        cors: true
+        authorizer: Auth
+        request:
+          schemas:
+            application/json: ${file(models/default-todo-model.json)}
+        reqValidatorName: 'xRequestValidator'
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+      - s3:PutObject
+      - s3:GetObject
+      Resource: arn:aws:s3:::${self:provider.environment.FILE_S3_BUCKET}/*
+    - Effect: Allow
+      Action:
+      - dynamodb:UpdateItem
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
+
+  # TODO: Configure this function - 
+  # Provide iamRoleStatements property for performing Actions on DynamoDB
+  GetUser:
+    handler: src/lambda/http/getUser.handler
+    events:
+    - http:
+        method: get
+        path: user
+        cors: true
+        authorizer: Auth
+        reqValidatorName: 'xRequestValidator'
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+      - dynamodb:Query
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}
+
+  GetAllUsers:
+    handler: src/lambda/http/getAllUsers.handler
+    events:
+    - http:
+        method: get
+        path: user/getAll
+        cors: true
+        authorizer: Auth
+        reqValidatorName: 'xRequestValidator'
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+      - dynamodb:GetItem
+      - dynamodb:Scan
+      - dynamodb:Query
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}
+
+  # TODO: Configure this function - 
+  # Provide iamRoleStatements property. Decide the Actions and AWS Resource. 
+  # To refer to an AWS resource defined in the "Resources" section, you can use "Resource: !GetAtt <resource-name>.Arn"
+  # To validate incoming HTTP requests, we have provided the request schemas in function definition below. 
+  CreateUser:
+    handler: src/lambda/http/createUser.handler
+    events:
+    - http:
+        method: post
+        path: user
+        cors: true
+        authorizer: Auth
+
+        request:
+          schemas:
+            application/json: ${file(models/create-user-model.json)}
+        reqValidatorName: 'RequestBodyValidator'
+        # documentation:
+    #   summary: "Create User"
+    #   description: "Create User"
+    #   tags:
+    #   - "Data Creation"
+    #   requestModels:
+    #     "application/json": "CreateTodoRequest"
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+      - dynamodb:Query
+      - dynamodb:GetItem
+      - dynamodb:PutItem
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}
+    - Effect: Allow
+      Action:
+      - s3:PutObject
+      - s3:GetObject
+      Resource: arn:aws:s3:::${self:provider.environment.FILE_S3_BUCKET}/*
+
+  # TODO: Configure this function
+  # Provide property for setting up CORS, Authorizer, iamRoleStatements, and request schemas
+  UpdateUser:
+    handler: src/lambda/http/updateUser.handler
+    events:
+    - http:
+        method: patch
+        path: user
+        cors: true
+        authorizer: Auth
+        request:
+          schemas:
+            application/json: ${file(models/update-user-model.json)}
+        reqValidatorName: 'RequestBodyValidator'
+        # documentation:
+    #   summary: 'Update todo'
+    #   description: 'Update todo'
+    #   tags:
+    #   - "Data Update"
+    #   requestModels:
+    #     'application/json': 'UpdateTodoRequest'
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+      - dynamodb:Query
+      - dynamodb:UpdateItem
+      - dynamodb:GetItem
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}
+
+  # TODO: Configure this function
+  # Provide property for setting up CORS, Authorizer, iamRoleStatements
+  GenerateAvatarUrl:
+    handler: src/lambda/http/generateAvatarUrl.handler
+    events:
+    - http:
+        method: post
+        path: user/avatar
+        cors: true
+        authorizer: Auth
+        reqValidatorName: 'xRequestValidator'
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+      - s3:PutObject
+      - s3:GetObject
+      Resource: arn:aws:s3:::${self:provider.environment.FILE_S3_BUCKET}/*
+    - Effect: Allow
+      Action:
+      - dynamodb:UpdateItem
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}
+
+
+  ResizeImage:
+    handler: src/lambda/s3/resizeImage.handler
+    events:
+    - sns:
+        arn:
+          Fn::Join:
+          - ':'
+          - - arn:aws:sns
+            - Ref: AWS::Region
+            - Ref: AWS::AccountId
+            - ${self:custom.topicName}
+        topicName: ${self:custom.topicName}
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+      - dynamodb:UpdateItem
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
+    - Effect: Allow
+      Action:
+      - dynamodb:UpdateItem
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}
+    - Effect: Allow
+      Action:
+      - s3:PutObject
+      - s3:GetObject
+      Resource: arn:aws:s3:::${self:provider.environment.THUMBNAILS_S3_BUCKET}/*
+    - Effect: Allow
+      Action:
+      - s3:PutObject
+      - s3:GetObject
+      Resource: arn:aws:s3:::${self:provider.environment.FILE_S3_BUCKET}/*
+    - Effect: Allow
+      Action:
+      - s3:PutObject
+      - s3:GetObject
+      Resource: arn:aws:s3:::${self:provider.environment.FILE_S3_BUCKET}/*
+
+resources:
+  Resources:
+    # Add necessary AWS resources. You will need at least the following AWS resources
+    # TODO: Fill the properties
+    # Feel free to change the names as you like. 
+    RequestBodyValidator:
+      Type: "AWS::ApiGateway::RequestValidator"
+      Properties:
+        Name: 'request-body-validator'
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        ValidateRequestBody: true
+        ValidateRequestParameters: false
+
+    RequestParamsValidator:
+      Type: "AWS::ApiGateway::RequestValidator"
+      Properties:
+        Name: 'request-params-validator'
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        ValidateRequestBody: false
+        ValidateRequestParameters: true
+
+    xRequestValidator:
+      Type: "AWS::ApiGateway::RequestValidator"
+      Properties:
+        Name: 'x-validator'
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        ValidateRequestBody: false
+        ValidateRequestParameters: false
+
+    GatewayResponseDefault4XX:
+      Type: AWS::ApiGateway::GatewayResponse
+      Properties:
+        # TODO: Create a DynamoDB table with local secondary index and a composite key
+        ResponseParameters:
+          gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+          gatewayresponse.header.Access-Control-Allow-Methods: "'GET,OPTIONS,POST'"
+        ResponseType: DEFAULT_4XX
+        RestApiId:
+          Ref: ApiGatewayRestApi
+
+    TodosTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: todoId
+          AttributeType: S
+        - AttributeName: createdAt
+          AttributeType: S
+        KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: todoId
+          KeyType: RANGE
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.TODOS_TABLE}
+        LocalSecondaryIndexes:
+        - IndexName: ${self:provider.environment.TODOS_INDEX}
+          KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: createdAt
+            KeyType: RANGE
+          Projection:
+            ProjectionType: ALL # Make All columns available in index
+
+
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        # - AttributeName: name
+        #   AttributeType: S
+        # - AttributeName: email
+        #   AttributeType: S
+        KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.USERS_TABLE}
+        # LocalSecondaryIndexes:
+    # - IndexName: ${self:provider.environment.USERS_NAME_INDEX}
+    #   KeySchema:
+    #   - AttributeName: id
+    #     KeyType: HASH
+    #   - AttributeName: name
+    #     KeyType: RANGE
+    #   Projection:
+    #     ProjectionType: ALL # Make All columns available in index
+
+
+    # TODO: Complete the bucket properties below. 
+    # Do not forget to add the CorsConfiguration propoerty
+    AttachmentsBucket:
+      Type: AWS::S3::Bucket
+      DependsOn: SNSTopicPolicy
+      Properties:
+        BucketName: ${self:provider.environment.FILE_S3_BUCKET}
+        NotificationConfiguration:
+          TopicConfigurations:
+          - Event: s3:ObjectCreated:Put
+            Topic: !Ref ImagesTopic
+        CorsConfiguration:
+          CorsRules:
+          - AllowedOrigins:
+            - '*'
+            AllowedHeaders:
+            - '*'
+            AllowedMethods:
+            - GET
+            - PUT
+            - POST
+            - DELETE
+            - HEAD
+            MaxAge: 3000
+
+    # TODO: Complete the policy below and attach it to the bucket defined above
+    # For cross referencing the name of the bucket, use "!Ref AttachmentsBucket"
+    BucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        PolicyDocument:
+          Id: MyPolicy
+          Version: "2012-10-17"
+          Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal: '*'
+            Action:
+            #- s3:PutObject
+            - s3:GetObject
+            #- s3:DeleteObject
+            Resource: 'arn:aws:s3:::${self:provider.environment.FILE_S3_BUCKET}/*'
+        Bucket: !Ref AttachmentsBucket
+
+    SNSTopicPolicy:
+      Type: AWS::SNS::TopicPolicy
+      Properties:
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+          - Effect: Allow
+            Principal:
+              AWS: "*"
+            Action: sns:Publish
+            Resource: !Ref ImagesTopic
+            Condition:
+              ArnLike:
+                AWS:SourceArn: arn:aws:s3:::${self:provider.environment.FILE_S3_BUCKET}
+        Topics:
+        - !Ref ImagesTopic
+
+    ThumbnailsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.THUMBNAILS_S3_BUCKET}
+        CorsConfiguration:
+          CorsRules:
+          - AllowedOrigins:
+            - '*'
+            AllowedHeaders:
+            - '*'
+            AllowedMethods:
+            - GET
+            - PUT
+            - POST
+            - DELETE
+            - HEAD
+            MaxAge: 3000
+
+    ThumbnailsBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        PolicyDocument:
+          Id: MyPolicy
+          Version: "2012-10-17"
+          Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal: '*'
+            Action:
+            #- s3:PutObject
+            - s3:GetObject
+            #- s3:DeleteObject
+            Resource: 'arn:aws:s3:::${self:provider.environment.THUMBNAILS_S3_BUCKET}/*'
+        Bucket: !Ref ThumbnailsBucket
+
+    ImagesTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: Image bucket topic
+        TopicName: ${self:custom.topicName}
