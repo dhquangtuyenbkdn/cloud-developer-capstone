@@ -4,7 +4,7 @@ import update from 'immutability-helper'
 import * as React from 'react'
 import { Button, Checkbox, Divider, Grid, Header, Icon, Input, Image, Loader, Card, Feed, Label, Modal, Form, DropdownProps, CheckboxProps } from 'semantic-ui-react'
 
-import { createTodo, deleteTodo, getTodos, patchTodo, getUploadUrl } from '../api/todos-api'
+import { createTodo, deleteTodo, getAllTodos, patchTodo, getUploadUrl } from '../api/todos-api'
 import { getAllUsers } from '../api/user-api'
 import { uploadFile } from '../api/file-api'
 import Auth from '../auth/Auth'
@@ -254,7 +254,7 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
 
   async componentDidMount() {
     try {
-      const todos = await getTodos(this.props.auth.getIdToken())
+      const todos = await getAllTodos(this.props.auth.getIdToken())
       this.setState({
         todos,
         loadingTodos: false
@@ -263,7 +263,7 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
       const users = await getAllUsers(this.props.auth.getIdToken())
 
       const selectUsers: any = []
-      users.forEach(user => selectUsers.push({ key: user.id, text: user.name, value: user.id }))
+      users.forEach(user => selectUsers.push({ key: user.id, text: `${user.name} (${user.email})`, value: user.id }))
       this.setState({
         users,
         selectUsers,

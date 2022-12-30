@@ -156,21 +156,6 @@ export default class App extends Component<AppProps, AppState> {
       return <LogIn auth={this.props.auth} />
     }
 
-
-    if (this.props.auth.isAuthenticated() && this.state.loadUserState !== LoadState.Loaded) {
-      return (
-        <Switch>
-          <Route
-            path="/user/create"
-            exact
-            render={props => {
-              return <CreateUser {...props} auth={this.props.auth} />
-            }}
-          />
-        </Switch>
-      )
-    }
-
     return (
       <Switch>
         <Route
@@ -178,6 +163,14 @@ export default class App extends Component<AppProps, AppState> {
           exact
           render={props => {
             return <Todos {...props} auth={this.props.auth} user={this.state.user[0]} />
+          }}
+        />
+
+        <Route
+          path="/user/create"
+          exact
+          render={props => {
+            return <CreateUser {...props} auth={this.props.auth} />
           }}
         />
 

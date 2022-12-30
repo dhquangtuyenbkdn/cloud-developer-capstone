@@ -32,6 +32,24 @@ export class UserAccess {
       return items[0] as User
   }
 
+  async getUserByEmail(email: string): Promise<User> {
+    logger.info("getUser by email: " + email)
+
+    const result = await this.docClient.query({
+      TableName: this.userTable,
+      KeyConditionExpression: 'email = :email',
+      ExpressionAttributeValues: {
+        ':email': email
+      },
+      ScanIndexForward: false
+    }).promise()
+
+    const items = result.Items
+
+    if (items && items.length > 0)
+      return items[0] as User
+  }
+
   async getAllUsers(userId?: string): Promise<UserItem[]> {
     logger.info("getAllUser: " + userId)
 
@@ -47,7 +65,8 @@ export class UserAccess {
   async createUser(user: User): Promise<User> {
     await this.docClient.put({
       TableName: this.userTable,
-      Item: user
+      Item: user,
+      ConditionExpression: "attribute_not_exists(email)",
     }).promise()
 
     return user
@@ -72,10 +91,24 @@ export class UserAccess {
         ':name': user.name,
         ':email': user.email,
         ':updateAt': user.updateAt
-      }
+      },
+      ConditionExpression: "attribute_not_exists(email)",
     }).promise()
 
     return await this.getUser(userId);
+  }
+
+  async deleteUser(userId: string): Promise<string> {
+
+    logger.info("deleteUser: " + userId)
+    await this.docClient.delete({
+      TableName: this.userTable,
+      Key: {
+        id: userId
+      },
+    }).promise()
+
+    return userId;
   }
 
   async updateUserAvatar(userId: string, avatarUrl: string): Promise<void> {
@@ -98,7 +131,7 @@ export class UserAccess {
       }
     }).promise()
   }
-  
+
   async checkUser(userId: string): Promise<boolean> {
     logger.info("getUser: " + userId)
 

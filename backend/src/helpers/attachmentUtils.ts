@@ -37,6 +37,10 @@ export class AttachmentUtils {
         return `https://${bucketName}.s3.amazonaws.com/${key}`
     }
 
+    getAvatarUrl(bucketName: string, userId: string): string {
+        return `https://${bucketName}.s3.amazonaws.com/${userId}/avatar.png`
+    }
+
     async getObject(bucketName: string, key: string): Promise<any> {
         return await s3.getObject({
             Bucket: bucketName,
@@ -46,7 +50,7 @@ export class AttachmentUtils {
 
     async putObjectAttachment(bucketName: string, userId: string, todoId: string, body: any) {
         logger.info(`putObjectAttachmentWithKey(${bucketName}, ${userId}, ${todoId})`);
-        
+
         await s3.putObject({
             Bucket: bucketName,
             Key: `${userId}/${todoId}/image.png`,
@@ -70,6 +74,19 @@ export class AttachmentUtils {
             await s3.deleteObject({
                 Bucket: bucketName,
                 Key: `${userId}/${todoId}/image.png`
+            }).promise();
+            logger.info("File successfully deleted...!");
+        } catch (err) {
+            logger.error("Failed to delete: " + JSON.stringify(err));
+        }
+    }
+
+
+    async deleteAvatar(bucketName: string, userId: string): Promise<any> {
+        try {
+            await s3.deleteObject({
+                Bucket: bucketName,
+                Key: `${userId}/avatar.png`
             }).promise();
             logger.info("File successfully deleted...!");
         } catch (err) {

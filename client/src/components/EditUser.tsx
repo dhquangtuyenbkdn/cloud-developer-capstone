@@ -52,18 +52,6 @@ export class EditUser extends React.PureComponent<EditUserProps, EditUserState> 
         email: this.props.user.email,
         avatarUrl: this.props.user.avatarUrl ?? defaultAvatarURL,
       })
-      // let userItem = localStorage.getItem('user');
-      // if (userItem != null && userItem != undefined && userItem.length > 0) {
-      //   let user = JSON.parse(userItem) as User;
-      //   if (user.email && user.email) {
-      //     this.setState({
-      //       editState: UserState.Finish,
-      //       name: this.props.user.name,
-      //       email: this.props.email,
-      //       avatarUrl: this.props.avatarUrl ?? defaultAvatarURL,
-      //     })
-      //   }
-      // }
     } catch (e) {
       alert(`Failed to fetch todos: ${(e as Error).message}`)
       localStorage.removeItem('user');

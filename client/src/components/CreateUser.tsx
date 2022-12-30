@@ -4,6 +4,7 @@ import Auth from '../auth/Auth'
 import { createUser, getAvatarUrl } from '../api/user-api'
 import { uploadFile } from '../api/file-api'
 import { User } from '../types/User'
+import { getUser } from '../api/user-api'
 
 enum UserState {
   Create,
@@ -40,6 +41,27 @@ export class CreateUser extends React.PureComponent<EditUserProps, EditUserState
     avatarUrl: defaultAvatarURL,
     createState: UserState.Create,
     // uploadState: UploadState.NoUpload
+  }
+
+  async componentDidMount() {
+    try {
+      if (!this.props.auth.isAuthenticated()) {
+        alert(`Please login before asset to app`)
+        this.props.history.replace('/')
+        return;
+      }
+
+      const userItem = await getUser(this.props.auth.getIdToken())
+
+      if (userItem) {
+        localStorage.setItem('user', JSON.stringify(userItem));
+
+        this.props.history.replace('/')
+      }
+
+    } catch (e) {
+      localStorage.removeItem('user');
+    }
   }
 
   handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,14 +106,15 @@ export class CreateUser extends React.PureComponent<EditUserProps, EditUserState
       const user = await createUser(this.props.auth.getIdToken(), { name: this.state.name, email: this.state.email })
       this.setUserState(UserState.Created)
 
-      if (this.state.file && user.avatarUrl) {
-        this.setUserState(UserState.UploadingFile)
-        await uploadFile(user.avatarUrl, this.state.file)
+      let avatarUrl = await getAvatarUrl(this.props.auth.getIdToken());
 
-        localStorage.setItem('user', JSON.stringify(user))
-        this.setUserState(UserState.Finish)
-      }
-      this.props.history.push(`/`)
+      this.setUserState(UserState.UploadingFile)
+      await uploadFile(avatarUrl, this.state.file)
+
+      localStorage.setItem('user', JSON.stringify(user))
+      this.setUserState(UserState.Finish)
+
+      this.props.history.replace(`/`)
     } catch (e) {
       alert('Could not upload a file: ' + (e as Error).message)
       this.setUserState(UserState.Create)

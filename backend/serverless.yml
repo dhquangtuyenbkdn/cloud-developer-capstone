@@ -122,12 +122,9 @@ functions:
     iamRoleStatements:
     - Effect: Allow
       Action:
+      - dynamodb:Scan
       - dynamodb:Query
       Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
-    - Effect: Allow
-      Action:
-      - dynamodb:Query
-      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}/index/${self:provider.environment.TODOS_INDEX}
 
   # TODO: Configure this function - 
   # Provide iamRoleStatements property. Decide the Actions and AWS Resource. 
@@ -319,13 +316,6 @@ functions:
           schemas:
             application/json: ${file(models/update-user-model.json)}
         reqValidatorName: 'RequestBodyValidator'
-        # documentation:
-    #   summary: 'Update todo'
-    #   description: 'Update todo'
-    #   tags:
-    #   - "Data Update"
-    #   requestModels:
-    #     'application/json': 'UpdateTodoRequest'
     iamRoleStatements:
     - Effect: Allow
       Action:
@@ -333,6 +323,32 @@ functions:
       - dynamodb:UpdateItem
       - dynamodb:GetItem
       Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}
+
+  # TODO: Configure this function
+  # Provide property for setting up CORS, Authorizer, iamRoleStatements
+  DeleteUser:
+    handler: src/lambda/http/deleteUser.handler
+    events:
+    - http:
+        method: delete
+        path: user
+        cors: true
+        authorizer: Auth
+        reqValidatorName: 'xRequestValidator'
+    iamRoleStatements:
+    - Effect: Allow
+      Action:
+      - dynamodb:DeleteItem
+      - dynamodb:Query
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}
+    - Effect: Allow
+      Action:
+      - s3:DeleteObject
+      Resource: arn:aws:s3:::${self:provider.environment.FILE_S3_BUCKET}/*
+    - Effect: Allow
+      Action:
+      - s3:DeleteObject
+      Resource: arn:aws:s3:::${self:provider.environment.THUMBNAILS_S3_BUCKET}/*
 
   # TODO: Configure this function
   # Provide property for setting up CORS, Authorizer, iamRoleStatements
@@ -355,7 +371,6 @@ functions:
       Action:
       - dynamodb:UpdateItem
       Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.USERS_TABLE}
-
 
   ResizeImage:
     handler: src/lambda/s3/resizeImage.handler
