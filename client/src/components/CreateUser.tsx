@@ -117,7 +117,7 @@ export class CreateUser extends React.PureComponent<EditUserProps, EditUserState
       this.props.history.replace(`/`)
     } catch (e) {
       if(this.state.createState == UserState.Creating) {
-        alert('Could create user: ' + (e as Error).message + '\r\nPlease check your name and email')
+        alert('Could create user: ' + (e as Error).message + '\r\nPlease check your email')
       }
       else {
         alert('Could not upload a file: ' + (e as Error).message)

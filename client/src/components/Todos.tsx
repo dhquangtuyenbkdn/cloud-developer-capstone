@@ -59,7 +59,7 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
     users: [],
     selectUsers: [],
     loadingTodos: true,
-    loadingUsers: true,
+    loadingUsers: isViewAll,
     showNewTask: false,
     currentTodoId: '',
     currentUserId: '',
@@ -261,15 +261,17 @@ export class Todos extends React.PureComponent<TodosProps, TodosState> {
         loadingTodos: false
       })
 
-      const users = await getAllUsers(this.props.auth.getIdToken())
+      if(isViewAll) {
+        const users = await getAllUsers(this.props.auth.getIdToken())
 
-      const selectUsers: any = []
-      users.forEach(user => selectUsers.push({ key: user.id, text: `${user.name} (${user.email})`, value: user.id }))
-      this.setState({
-        users,
-        selectUsers,
-        loadingUsers: false
-      })
+        const selectUsers: any = []
+        users.forEach(user => selectUsers.push({ key: user.id, text: `${user.name} (${user.email})`, value: user.id }))
+        this.setState({
+          users,
+          selectUsers,
+          loadingUsers: false
+        })
+      }
     } catch (e) {
       alert(`Failed to fetch todos: ${(e as Error).message}`)
     }
