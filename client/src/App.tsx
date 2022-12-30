@@ -58,12 +58,21 @@ export default class App extends Component<AppProps, AppState> {
   async componentDidMount() {
     try {
       await new Promise(res => setTimeout(res, 1000));
-      this.setState({ loadUserState: LoadState.Loading });
-      await this.getLoginUser();
+      if (this.props.auth.isAuthenticated()) {
+        this.setState({ loadUserState: LoadState.Loading });
+        await this.getLoginUser();
+      }
+      else {
+      }
     } catch (e) {
-      alert(`Failed to fetch todos: ${(e as Error).message}`)
+      alert(`Failed to fetch user: ${(e as Error).message}`)
       localStorage.removeItem('user');
-      this.setState({ loadUserState: LoadState.Loading });
+      if (this.props.auth.isAuthenticated()) {
+        this.setState({ loadUserState: LoadState.Start });
+      }
+      else {
+        this.setState({ loadUserState: LoadState.Loaded });
+      }
     }
   }
 
